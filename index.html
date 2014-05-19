@@ -1,0 +1,161 @@
+<!doctype html>
+<html>
+<head>
+    <title>Institution list builder</title>
+
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+
+    <script src="https://code.jquery.com/jquery-2.1.1.js"></script>
+    <script src="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.6.0/underscore.js"></script>
+    <script src="lib/ucsv.min.js"></script>
+    <script src="js.js"></script>
+
+    <link href="https://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.css" rel="stylesheet"/>
+    <link href="style.css" rel="stylesheet"/>
+
+    <!-- The contents of stylesheet.xml is repeated here to make it available when using file:// (e.g. ajax not available). -->
+    <script id="xslt-stylesheet" type="text/xsl">
+        <?xml version="1.0" encoding="UTF-8"?>
+        <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+                        xmlns:l="http://www.lookup.cam.ac.uk"
+                        extension-element-prefixes="l"
+                        version="1.0">
+
+            <xsl:output method="xml" indent="yes"/>
+
+            <!-- Index institutions by their parents to avoid O(n^2) behavior which
+                 would be incurred by searching all institutions for children at each
+                 institution. -->
+            <xsl:key name="institution-by-parent"
+                     match="/l:result/l:entities/l:institutions/l:institution"
+                     use="l:parentInsts/l:institution/@ref"/>
+
+            <!-- Entry point -->
+            <xsl:template match="/">
+                <ul id="institution-tree">
+                    <!-- Start the traversal from institutions with no parents (the root(s)) -->
+                    <xsl:apply-templates select="//l:entities/l:institutions/l:institution[not(l:parentInsts/l:institution)]"/>
+                </ul>
+            </xsl:template>
+
+            <!-- Template each institution in a <li> -->
+            <xsl:template match="l:institution">
+                <li title="{l:name}">
+                    <label for="checkbox-{@instid}">
+                        <input type="checkbox" id="checkbox-{@instid}" data-instid="{@instid}"/>
+                        <xsl:value-of select="l:name"/>
+                    </label>
+
+                    <!-- Recursively template child institutions in a <ul> -->
+                    <xsl:variable name="children" select="key('institution-by-parent', @id)"/>
+                    <xsl:if test="$children">
+                        <ul>
+                            <xsl:apply-templates select="$children"/>
+                        </ul>
+                    </xsl:if>
+                </li>
+            </xsl:template>
+        </xsl:stylesheet>
+    </script>
+</head>
+<body class="container">
+    <div class="jumbotron">
+        <h1>Institution list builder</h1>
+        <p>Follow the steps to build an institution list.</p>
+        <p><a class="btn btn-primary btn-lg" role="button" title="it looks cool though">This button does nothing</a></p>
+    </div>
+
+    <div class="container">
+        <h2><small>Step 1</small> Input institution XML from lookup</h2>
+        <form role="form" id="step-1-form">
+            <div id="step-1-form-xml-group" class="form-group">
+                <p class="help">
+                    <small title="lookup.cam does not send CORS headers">Due to technical restrictions, it's not <span class="strike">possible</span> practical to automatically fetch the institution data from lookup.cam.</small>
+                </p>
+                <h5>Instructions</h5>
+                <ol>
+                    <li>Use the link below view the latest institution list from lookup.cam.ac.uk</li>
+                    <li>When prompted, log in with the username <code>anonymous</code> and no password</li>
+                    <li>Copy the XML (it should start with <code>&lt;?xml version</code> &mdash; if you just see text you probably need to right click and choose &ldquo;view source&rdquo; or similar</li>
+                    <li>Paste it in the area below and press Submit</li>
+                </ol>
+                <p>The institution list is available at <a target="_blank" href="view-source:https://www.lookup.cam.ac.uk/api/v1/inst/all-insts?fetch=parent_insts&amp;flatten=true">https://www.lookup.cam.ac.uk/api/v1/inst/all-insts?fetch=parent_insts&amp;flatten=true</a></p>
+                <textarea
+                    name="institution-input-xml"
+                    class="form-control xml-input"
+                    id="step-1-form-xml"
+                    placeholder="&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; standalone=&quot;yes&quot;?&gt; ..."
+                    rows="10"></textarea>
+
+                <p class="help-block error-msg"></p>
+            </div>
+
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary">Submit</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="hidden" id="step-2">
+        <h2><small>Step 2</small> Curate full institution list</h2>
+        <p>Tick the entries you wish to be included. An exclusion list of the institutions you've not selected is maintained at the side of the page.</p>
+
+        <form role="form" id="step-2-form">
+            <div class="row">
+                <div class="form-group col-xs-6" id="institution-tree-group">
+                    <!-- Rendered tree goes here -->
+                </div>
+
+                <div class="col-xs-6" id="exclusion-list-fixed-wrapper">
+                    <div id="exclusion-list-fixed-container">
+                        <div class="form-group">
+                            <label for="exclusion-list">Exclusion list</label>
+                            <textarea
+                                class="form-control"
+                                id="exclusion-list"
+                                name="exclusion-list"
+                                rows="10"
+                                placeholder="One institution ID per line"
+                                ></textarea>
+                            <p class="help-block">
+                                As you uncheck institutions from the tree they'll show up in this list. This works in both directions &mdash; changes to this list will update the tree. This allows you to restore a previously used exclusion list by pasting it into this box at a later date.
+                            </p>
+                            <button type="button" id="exclusion-list-dl-btn" class="btn btn-sm btn-info"><span class="glyphicon glyphicon-download"></span> Download exclusion list</button>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="institution-list-csv">Institution list CSV</label>
+                            <textarea
+                                readonly
+                                class="form-control"
+                                id="institution-list-csv"
+                                name="institution-list-csv"
+                                rows="10"
+                                placeholder="Selected institutions will appear here"
+                                >This is some text</textarea>
+                            <p class="help-block">
+                                Selected institutions will appear here. Download this file and send it to someone with admin rights to the Open Access site.
+                            </p>
+                            <button type="button" id="csv-dl-btn" class="btn btn-sm btn-info"><span class="glyphicon glyphicon-download"></span> Download CSV</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div id="modal-stylesheet-error" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                <h4 class="modal-title" id="mySmallModalLabel">Error</h4>
+            </div>
+            <div class="modal-body">
+                Unable to fetch XML stylesheet.
+            </div>
+      </div>
+        </div>
+    </div>
+</body>
+</html>

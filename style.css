@@ -1,0 +1,39 @@
+.strike {
+	text-decoration: line-through;
+}
+
+.error-msg {
+	display: none;
+}
+
+textarea {
+	resize: vertical;
+	font-family: Consolas, "Andale Mono WT", "Andale Mono", "Lucida Console", "Lucida Sans Typewriter", "DejaVu Sans Mono", "Bitstream Vera Sans Mono", "Liberation Mono", "Nimbus Mono L", Monaco, "Courier New", Courier, monospace;
+}
+
+#step-2-form ul {
+	padding-left: 0;
+}
+
+#step-2-form li:before {
+	content: "";
+	width: 14px;
+	border-bottom: 1px solid black;
+	position: absolute;
+	display: block;
+	top: 11px;
+	left: 0px;
+}
+#step-2-form li {
+	position: relative;
+	list-style-type: none;
+	padding-left: 19px;
+	border-left: 1px solid black;
+}
+
+
+#exclusion-list-fixed-container.affix{
+	top: 20px;
+	/* Preserve right margin when position: fixed; */
+	margin-right: 56px;
+}

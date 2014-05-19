@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+                xmlns:l="http://www.lookup.cam.ac.uk"
+                extension-element-prefixes="l"
+                version="1.0">
+
+    <xsl:output method="xml" indent="yes"/>
+
+    <!-- Index institutions by their parents to avoid O(n^2) behavior which
+         would be incurred by searching all institutions for children at each
+         institution. -->
+    <xsl:key name="institution-by-parent"
+             match="/l:result/l:entities/l:institutions/l:institution"
+             use="l:parentInsts/l:institution/@ref"/>
+
+    <!-- Entry point -->
+    <xsl:template match="/">
+        <ul id="institution-tree">
+            <!-- Start the traversal from institutions with no parents (the root(s)) -->
+            <xsl:apply-templates select="//l:entities/l:institutions/l:institution[not(l:parentInsts/l:institution)]"/>
+        </ul>
+    </xsl:template>
+
+    <!-- Template each institution in a <li> -->
+    <xsl:template match="l:institution">
+        <li title="{l:name}">
+            <label for="checkbox-{@instid}">
+                <input type="checkbox" id="checkbox-{@instid}" data-instid="{@instid}"/>
+                <xsl:value-of select="l:name"/>
+            </label>
+
+            <!-- Recursively template child institutions in a <ul> -->
+            <xsl:variable name="children" select="key('institution-by-parent', @id)"/>
+            <xsl:if test="$children">
+                <ul>
+                    <xsl:apply-templates select="$children"/>
+                </ul>
+            </xsl:if>
+        </li>
+    </xsl:template>
+
+</xsl:stylesheet>
