@@ -18,6 +18,13 @@ $(function() {
     var excludedInstitutions = null;
     var syncing = false;
 
+    var substitutions = [];
+    var substitutionsOccurences = [];
+    var $substitutionsInput = $('#substitutions-input');
+
+    var substitutionTemplate = _.template($('#substitution-template').text());
+    var substitutionRegExp = new RegExp("^s/((?:(?:\\\\/)|[^/])*)/((?:(?:\\\\/)|[^/])*)/$");
+
     var futureStylesheet = getStylesheet();
 
     function getStylesheet() {
@@ -98,7 +105,7 @@ $(function() {
 
         var tree = $("#institution-tree-group");
 
-        $("#exclusion-list-fixed-container").affix({
+        $("#exclusion-list-fixed-wrapper").affix({
             offset: {
                 top: $("#exclusion-list-fixed-wrapper").position().top - 20,
             }
@@ -141,13 +148,67 @@ $(function() {
         $(excludedCheckboxIds).prop("checked", false);
     }
 
+    function onSubstitutionsSubmit() {
+        substitutions = _.chain($substitutionsInput.val().split(/\n/g))
+            .map(parseSubstitution)
+            .compact()
+            .value();
+        $substitutionsInput.focus();
+        generateCsv();
+    }
+
+    function applySubstitutionsTo(text) {
+        _.each(substitutions, function(substitution, index) {
+            // substitution[0] = the regex to match
+            // substitution[1] = the string to replace matches with
+            var regExp = new RegExp(substitution[0], "g");
+            var occurences = text.match(regExp);
+            // Keep track of how many times a match was found using this regex
+            updateSubstitutionOccurences(index, occurences ? occurences.length : 0);
+            text = text.replace(regExp, substitution[1]);
+        });
+        return text;
+    }
+
+    function updateSubstitutionOccurences(index, addCount) {
+        substitutionsOccurences[index] = (substitutionsOccurences[index] || 0) + addCount;
+    }
+
+    function resetSubstitutionsOccurences() {
+        substitutionsOccurences = [];
+    }
+
+    function parseSubstitution(substitutionString) {
+        var matches = _.map(substitutionString.match(substitutionRegExp), function(match) {
+            return match.replace(/\\\//g, "/");
+        });
+        return matches[1] ? [matches[1], matches[2]] : null;
+    }
+
+    function renderSubstitutions() {
+        var html = _.map(substitutions, renderSubstitution).join('');
+        $("#substitutions-list").html(html);
+    }
+
+    function renderSubstitution(substitution, index) {
+        return substitutionTemplate({
+            find: substitution[0],
+            replace: substitution[1],
+            occurences: substitutionsOccurences[index]
+        });
+    }
+
     function generateCsv() {
+        resetSubstitutionsOccurences();
         var $checkboxes = $("#" + INSTITUTION_TREE_ID + " input[type=checkbox]:checked");
         var institutions = _.map($checkboxes, function(checkbox) {
             var $cb = $(checkbox);
-            return [$cb.data("instid"), $cb.parent("label").text()];
+            var id = $cb.data("instid");
+            var label = applySubstitutionsTo($cb.parent("label").text())
+            return [id, label];
         });
         $("#institution-list-csv").val(CSV.arrayToCsv(institutions));
+        renderSubstitutions();
     }
 
     function download(data, mime) {
@@ -155,7 +216,7 @@ $(function() {
         // only downloading, not actually navigating away.
         var onbeforeunload = window.onbeforeunload;
         window.onbeforeunload = null;
-        
+
         // Navigate to a data URI. This should "download" the contents of the URI.
         mime = mime || "application/octet-stream";
         var uri = "data:" + mime + "," + encodeURIComponent(data);
@@ -163,7 +224,7 @@ $(function() {
 
         _.defer(function() {
             // restore previous value
-            window.onbeforeunload = onbeforeunload; 
+            window.onbeforeunload = onbeforeunload;
         });
     }
 
@@ -266,6 +327,12 @@ $(function() {
         generateCsv();
         syncing = false;
     });
+
+    $('#btn-substitutions-download').on("click", function() {
+        var text = $substitutionsInput.val();
+        download(text, "application/octet-stream");
+    });
+    $substitutionsInput.on('change', onSubstitutionsSubmit);
 
     $("#exclusion-list-dl-btn").on("click", function() {
         var text = $("#exclusion-list").val();

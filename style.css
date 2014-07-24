@@ -11,11 +11,11 @@ textarea {
 	font-family: Consolas, "Andale Mono WT", "Andale Mono", "Lucida Console", "Lucida Sans Typewriter", "DejaVu Sans Mono", "Bitstream Vera Sans Mono", "Liberation Mono", "Nimbus Mono L", Monaco, "Courier New", Courier, monospace;
 }
 
-#step-2-form ul {
+#institution-tree-group ul {
 	padding-left: 0;
 }
 
-#step-2-form li:before {
+#institution-tree-group li:before {
 	content: "";
 	width: 14px;
 	border-bottom: 1px solid black;
@@ -24,16 +24,25 @@ textarea {
 	top: 11px;
 	left: 0px;
 }
-#step-2-form li {
+
+#institution-tree-group li {
 	position: relative;
 	list-style-type: none;
 	padding-left: 19px;
 	border-left: 1px solid black;
 }
 
+#substitutions-list {
+	margin-top: 15px;
+}
 
-#exclusion-list-fixed-container.affix{
+#substitutions-list li {
+	overflow: auto;
+}
+
+#exclusion-list-fixed-wrapper.affix{
 	top: 20px;
-	/* Preserve right margin when position: fixed; */
-	margin-right: 56px;
+	right: 0;
+	/* Preserve right padding when position: fixed; */
+	padding-right: 56px;
 }
