@@ -18,6 +18,12 @@ $(function() {
     var excludedInstitutions = null;
     var syncing = false;
 
+    var findReplaceItems = [];
+    var findReplaceItemOccurences = [];
+    var findReplaceItemTemplate = _.template($('#findreplace-item-template').text());
+    var $findreplaceInputFind = $('#findreplace-input-find');
+    var $findreplaceInputReplace = $('#findreplace-input-replace');
+
     var futureStylesheet = getStylesheet();
 
     function getStylesheet() {
@@ -98,7 +104,7 @@ $(function() {
 
         var tree = $("#institution-tree-group");
 
-        $("#exclusion-list-fixed-container").affix({
+        $("#exclusion-list-fixed-wrapper").affix({
             offset: {
                 top: $("#exclusion-list-fixed-wrapper").position().top - 20,
             }
@@ -141,11 +147,71 @@ $(function() {
         $(excludedCheckboxIds).prop("checked", false);
     }
 
+    function onFindReplaceSubmit() {
+        addFindreplaceItem($findreplaceInputFind.val(), $findreplaceInputReplace.val());
+        $findreplaceInputFind.val("").focus();
+        $findreplaceInputReplace.val("");
+    }
+
+    function applyFindreplaceItemsTo(text) {
+        _.each(findReplaceItems, function(findreplaceItem, index) {
+            // findReplaceItem[0] = the regex to match
+            // findReplaceItem[1] = the string to replace matches with
+            var regExp = new RegExp(findreplaceItem[0], "g");
+            var occurences = text.match(regExp);
+            // Keep track of how many times a match was found using this regex
+            updateFindReplaceItemOccurences(index, occurences ? occurences.length : 0);
+            text = text.replace(regExp, findreplaceItem[1]);
+        });
+        return text;
+    }
+
+    function updateFindReplaceItemOccurences(index, addCount) {
+        findReplaceItemOccurences[index] = (findReplaceItemOccurences[index] || 0) + addCount;
+    }
+
+    function resetFindReplaceItemOccurences() {
+        findReplaceItemOccurences = [];
+    }
+
+    function onFindReplaceItemsChange() {
+        resetFindReplaceItemOccurences();
+        generateCsv();
+        renderFindreplaceItems();
+    }
+
+    function addFindreplaceItem(find, replace) {
+        if (find.length) {
+            findReplaceItems.push([find, replace]);
+            onFindReplaceItemsChange();
+        }
+    }
+
+    function removeFindreplaceItem(index) {
+        findReplaceItems.splice(index, 1);
+        onFindReplaceItemsChange();
+    }
+
+    function renderFindreplaceItems() {
+        var html = _.map(findReplaceItems, renderFindReplaceItem).join('');
+        $("#findreplace-list").html(html);
+    }
+
+    function renderFindReplaceItem(findReplaceItem, index) {
+        return findReplaceItemTemplate({
+            find: findReplaceItem[0],
+            replace: findReplaceItem[1],
+            occurences: findReplaceItemOccurences[index]
+        });
+    }
+
     function generateCsv() {
         var $checkboxes = $("#" + INSTITUTION_TREE_ID + " input[type=checkbox]:checked");
         var institutions = _.map($checkboxes, function(checkbox) {
             var $cb = $(checkbox);
-            return [$cb.data("instid"), $cb.parent("label").text()];
+            var id = $cb.data("instid");
+            var label = applyFindreplaceItemsTo($cb.parent("label").text())
+            return [id, label];
         });
         $("#institution-list-csv").val(CSV.arrayToCsv(institutions));
     }
@@ -155,7 +221,7 @@ $(function() {
         // only downloading, not actually navigating away.
         var onbeforeunload = window.onbeforeunload;
         window.onbeforeunload = null;
-        
+
         // Navigate to a data URI. This should "download" the contents of the URI.
         mime = mime || "application/octet-stream";
         var uri = "data:" + mime + "," + encodeURIComponent(data);
@@ -163,7 +229,7 @@ $(function() {
 
         _.defer(function() {
             // restore previous value
-            window.onbeforeunload = onbeforeunload; 
+            window.onbeforeunload = onbeforeunload;
         });
     }
 
@@ -265,6 +331,18 @@ $(function() {
         refreshTreeSelections(excludedInstitutions);
         generateCsv();
         syncing = false;
+    });
+
+    $findreplaceInputFind.add($findreplaceInputReplace).on('keyup', function(e) {
+        if (e.which === 13) {
+            onFindReplaceSubmit();
+        }
+    });
+
+    $('#btn-findreplace-submit').on("click", onFindReplaceSubmit);
+
+    $("#findreplace-list").on("click", ".btn-remove", function() {
+        removeFindreplaceItem($(this).parents('.findreplace-item').index());
     });
 
     $("#exclusion-list-dl-btn").on("click", function() {

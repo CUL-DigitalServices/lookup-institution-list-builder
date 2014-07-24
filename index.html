@@ -107,38 +107,56 @@
                     <!-- Rendered tree goes here -->
                 </div>
 
-                <div class="col-xs-6" id="exclusion-list-fixed-wrapper">
-                    <div id="exclusion-list-fixed-container">
-                        <div class="form-group">
-                            <label for="exclusion-list">Exclusion list</label>
-                            <textarea
-                                class="form-control"
-                                id="exclusion-list"
-                                name="exclusion-list"
-                                rows="10"
-                                placeholder="One institution ID per line"
-                                ></textarea>
-                            <p class="help-block">
-                                As you uncheck institutions from the tree they'll show up in this list. This works in both directions &mdash; changes to this list will update the tree. This allows you to restore a previously used exclusion list by pasting it into this box at a later date.
-                            </p>
-                            <button type="button" id="exclusion-list-dl-btn" class="btn btn-sm btn-info"><span class="glyphicon glyphicon-download"></span> Download exclusion list</button>
-                        </div>
+                <div id="exclusion-list-fixed-wrapper" class="col-xs-6">
+                    <div class="form-group">
+                        <label for="exclusion-list">Exclusion list</label>
+                        <textarea
+                            class="form-control"
+                            id="exclusion-list"
+                            name="exclusion-list"
+                            rows="6"
+                            placeholder="One institution ID per line"
+                            ></textarea>
+                        <p class="help-block">
+                            As you uncheck institutions from the tree they'll show up in this list. This works in both directions &mdash; changes to this list will update the tree. This allows you to restore a previously used exclusion list by pasting it into this box at a later date.
+                        </p>
+                        <button type="button" id="exclusion-list-dl-btn" class="btn btn-sm btn-info"><span class="glyphicon glyphicon-download"></span> Download exclusion list</button>
+                    </div>
 
-                        <div class="form-group">
-                            <label for="institution-list-csv">Institution list CSV</label>
-                            <textarea
-                                readonly
-                                class="form-control"
-                                id="institution-list-csv"
-                                name="institution-list-csv"
-                                rows="10"
-                                placeholder="Selected institutions will appear here"
-                                >This is some text</textarea>
-                            <p class="help-block">
-                                Selected institutions will appear here. Download this file and send it to someone with admin rights to the Open Access site.
-                            </p>
-                            <button type="button" id="csv-dl-btn" class="btn btn-sm btn-info"><span class="glyphicon glyphicon-download"></span> Download CSV</button>
-                        </div>
+                    <div class="form-group">
+                        <label for="findreplace-input-find">Replace</label>
+                        <input id="findreplace-input-find" placeholder="e.g. '(D|d)ept\.*'" type="text" class="form-control">
+                        <label for="findreplace-input-replace">with</label>
+                        <input id="findreplace-input-replace" type="text" placeholder="e.g. 'Department'" class="form-control">
+                        <p class="help-block">Find and replace within the CSV records.</p>
+                        <button type="button" id="btn-findreplace-submit" class="btn btn-sm btn-info"><span class="glyphicon glyphicon-ok"></span> Apply</button>
+
+                        <script type="text/template" id="findreplace-item-template">
+                            <li class="list-group-item findreplace-item">
+                                Replace <span class="label label-danger"><%= find %></span> with <span class="label label-success"><%= replace || "&nbsp;" %></span>
+                                <div class="pull-right">
+                                    <small>(replaced <%= occurences %> occurence<%= occurences !== 1 ? 's' : '' %>)</small>
+                                    <button class="btn-remove btn btn-default btn-xs" type="button"><span class="glyphicon glyphicon-remove"></span></button>
+                                </div>
+                            </li>
+                        </script>
+                        <ul id="findreplace-list" class="list-group"></ul>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="institution-list-csv">Institution list CSV</label>
+                        <textarea
+                            readonly
+                            class="form-control"
+                            id="institution-list-csv"
+                            name="institution-list-csv"
+                            rows="6"
+                            placeholder="Selected institutions will appear here"
+                            >This is some text</textarea>
+                        <p class="help-block">
+                            Selected institutions will appear here. Download this file and send it to someone with admin rights to the Open Access site.
+                        </p>
+                        <button type="button" id="csv-dl-btn" class="btn btn-sm btn-info"><span class="glyphicon glyphicon-download"></span> Download CSV</button>
                     </div>
                 </div>
             </div>
