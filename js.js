@@ -182,7 +182,7 @@ $(function() {
         var matches = _.map(substitutionString.match(substitutionRegExp), function(match) {
             return match.replace(/\\\//g, "/");
         });
-        return matches && matches[1] ? [matches[1], matches[2]] : null;
+        return matches[1] ? [matches[1], matches[2]] : null;
     }
 
     function renderSubstitutions() {
