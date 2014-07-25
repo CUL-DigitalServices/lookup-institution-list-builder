@@ -18,11 +18,12 @@ $(function() {
     var excludedInstitutions = null;
     var syncing = false;
 
-    var findReplaceItems = [];
-    var findReplaceItemOccurences = [];
-    var findReplaceItemTemplate = _.template($('#findreplace-item-template').text());
-    var $findreplaceInputFind = $('#findreplace-input-find');
-    var $findreplaceInputReplace = $('#findreplace-input-replace');
+    var substitutions = [];
+    var substitutionsOccurences = [];
+    var $substitutionsInput = $('#substitutions-input');
+
+    var substitutionTemplate = _.template($('#substitution-template').text());
+    var substitutionRegExp = new RegExp("^s/((?:(?:\\\\/)|[^/])*)/((?:(?:\\\\/)|[^/])*)/$");
 
     var futureStylesheet = getStylesheet();
 
@@ -147,73 +148,67 @@ $(function() {
         $(excludedCheckboxIds).prop("checked", false);
     }
 
-    function onFindReplaceSubmit() {
-        addFindreplaceItem($findreplaceInputFind.val(), $findreplaceInputReplace.val());
-        $findreplaceInputFind.val("").focus();
-        $findreplaceInputReplace.val("");
+    function onSubstitutionsSubmit() {
+        substitutions = _.chain($substitutionsInput.val().split(/\n/g))
+            .map(parseSubstitution)
+            .compact()
+            .value();
+        $substitutionsInput.focus();
+        generateCsv();
     }
 
-    function applyFindreplaceItemsTo(text) {
-        _.each(findReplaceItems, function(findreplaceItem, index) {
-            // findReplaceItem[0] = the regex to match
-            // findReplaceItem[1] = the string to replace matches with
-            var regExp = new RegExp(findreplaceItem[0], "g");
+    function applySubstitutionsTo(text) {
+        _.each(substitutions, function(substitution, index) {
+            // substitution[0] = the regex to match
+            // substitution[1] = the string to replace matches with
+            var regExp = new RegExp(substitution[0], "g");
             var occurences = text.match(regExp);
             // Keep track of how many times a match was found using this regex
-            updateFindReplaceItemOccurences(index, occurences ? occurences.length : 0);
-            text = text.replace(regExp, findreplaceItem[1]);
+            updateSubstitutionOccurences(index, occurences ? occurences.length : 0);
+            text = text.replace(regExp, substitution[1]);
         });
         return text;
     }
 
-    function updateFindReplaceItemOccurences(index, addCount) {
-        findReplaceItemOccurences[index] = (findReplaceItemOccurences[index] || 0) + addCount;
+    function updateSubstitutionOccurences(index, addCount) {
+        substitutionsOccurences[index] = (substitutionsOccurences[index] || 0) + addCount;
     }
 
-    function resetFindReplaceItemOccurences() {
-        findReplaceItemOccurences = [];
+    function resetSubstitutionsOccurences() {
+        substitutionsOccurences = [];
     }
 
-    function onFindReplaceItemsChange() {
-        resetFindReplaceItemOccurences();
-        generateCsv();
-        renderFindreplaceItems();
+    function parseSubstitution(substitutionString) {
+        var matches = _.map(substitutionString.match(substitutionRegExp), function(match) {
+            return match.replace(/\\\//g, "/");
+        });
+        return matches && matches[1] ? [matches[1], matches[2]] : null;
     }
 
-    function addFindreplaceItem(find, replace) {
-        if (find.length) {
-            findReplaceItems.push([find, replace]);
-            onFindReplaceItemsChange();
-        }
+    function renderSubstitutions() {
+        var html = _.map(substitutions, renderSubstitution).join('');
+        $("#substitutions-list").html(html);
     }
 
-    function removeFindreplaceItem(index) {
-        findReplaceItems.splice(index, 1);
-        onFindReplaceItemsChange();
-    }
-
-    function renderFindreplaceItems() {
-        var html = _.map(findReplaceItems, renderFindReplaceItem).join('');
-        $("#findreplace-list").html(html);
-    }
-
-    function renderFindReplaceItem(findReplaceItem, index) {
-        return findReplaceItemTemplate({
-            find: findReplaceItem[0],
-            replace: findReplaceItem[1],
-            occurences: findReplaceItemOccurences[index]
+    function renderSubstitution(substitution, index) {
+        return substitutionTemplate({
+            find: substitution[0],
+            replace: substitution[1],
+            occurences: substitutionsOccurences[index]
         });
     }
 
     function generateCsv() {
+        resetSubstitutionsOccurences();
         var $checkboxes = $("#" + INSTITUTION_TREE_ID + " input[type=checkbox]:checked");
         var institutions = _.map($checkboxes, function(checkbox) {
             var $cb = $(checkbox);
             var id = $cb.data("instid");
-            var label = applyFindreplaceItemsTo($cb.parent("label").text())
+            var label = applySubstitutionsTo($cb.parent("label").text())
             return [id, label];
         });
         $("#institution-list-csv").val(CSV.arrayToCsv(institutions));
+        renderSubstitutions();
     }
 
     function download(data, mime) {
@@ -333,17 +328,11 @@ $(function() {
         syncing = false;
     });
 
-    $findreplaceInputFind.add($findreplaceInputReplace).on('keyup', function(e) {
-        if (e.which === 13) {
-            onFindReplaceSubmit();
-        }
+    $('#btn-substitutions-download').on("click", function() {
+        var text = $substitutionsInput.val();
+        download(text, "application/octet-stream");
     });
-
-    $('#btn-findreplace-submit').on("click", onFindReplaceSubmit);
-
-    $("#findreplace-list").on("click", ".btn-remove", function() {
-        removeFindreplaceItem($(this).parents('.findreplace-item').index());
-    });
+    $substitutionsInput.on('change', onSubstitutionsSubmit);
 
     $("#exclusion-list-dl-btn").on("click", function() {
         var text = $("#exclusion-list").val();

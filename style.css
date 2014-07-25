@@ -32,11 +32,11 @@ textarea {
 	border-left: 1px solid black;
 }
 
-#findreplace-list {
+#substitutions-list {
 	margin-top: 15px;
 }
 
-#findreplace-list li {
+#substitutions-list li {
 	overflow: auto;
 }
 
